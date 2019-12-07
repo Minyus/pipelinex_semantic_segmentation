@@ -22,6 +22,16 @@ PIPELINES:
     decorator: pipelinex.log_time
     nodes:
 
-      - inputs:
-        func:
+      - inputs: parameters
+        func: demo.voc_demo.generate_datasets
         outputs:
+          - train_dataset
+          - val_dataset
+
+      - inputs: train_dataset
+        func: {=: pipelinex.GetPartialDataset, size: 100}
+        outputs: partial_train_dataset
+
+      - inputs: val_dataset
+        func: {=: pipelinex.GetPartialDataset, size: 100}
+        outputs: partial_val_dataset

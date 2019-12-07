@@ -169,3 +169,5 @@ catboost_info
 *.pt
 *.pth
 *-ubyte
+*.tar
+*VOCdevkit

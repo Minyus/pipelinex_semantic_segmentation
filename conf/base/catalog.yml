@@ -8,3 +8,9 @@
 #  type: JSONLocalDataSet
 #  type: kedro.contrib.io.yaml_local.YAMLLocalDataSet
   cached: False
+
+data/load/partial_train_dataset.pickle:
+  type: PickleLocalDataSet
+
+data/load/partial_val_dataset.pickle:
+  type: PickleLocalDataSet
