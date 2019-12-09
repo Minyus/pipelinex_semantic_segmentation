@@ -1,3 +1,58 @@
+pytorch_model:
+  =: torchvision.models.segmentation.deeplabv3_resnet101
+  pretrained: True
+  progress: True
+  num_classes: 21
+  aux_loss:  # None
+
+train_params:
+  epochs: 1  # number of epochs to train
+  time_limit: 32400  # sec
+#  model_checkpoint_params:
+#    dirname: ../checkpoint
+#    filename_prefix: "%Y-%m-%dT%H-%M-%S"
+#    offset_hours: 8
+#    n_saved: 1
+#    atomic: True
+#    require_empty: True
+#    create_dir: True
+#    save_as_state_dict: False
+#  early_stopping_params:
+#    metric: loss
+#    minimize: True
+#    patience: 1000
+  scheduler: {=: ignite.contrib.handlers.param_scheduler.LinearCyclicalScheduler}
+#  scheduler: {=: ignite.contrib.handlers.param_scheduler.CosineAnnealingScheduler}
+  scheduler_params:
+    param_name: lr
+    start_value: 0.001
+    end_value: 0.01
+    cycle_epochs: 2  # cycle_size: int(cycle_epochs * len(train_loader))
+    cycle_mult: 1.0
+    start_value_mult: 1.0
+    end_value_mult: 1.0
+    save_history: False
+  optimizer: {=: torch.optim.Adam}
+  optimizer_params:
+    weight_decay: {=: operator.truediv, _: [0.00001, {=: train_params.train_data_loader_params.batch_size}]}
+  loss_fn: {=: demo.voc_demo.VocCrossEntropyLoss2d, _: }
+  evaluation_metrics:
+    loss:
+      =: ignite.metrics.Loss
+      loss_fn: {=: demo.voc_demo.VocCrossEntropyLoss2d, _: }
+  train_data_loader_params:
+    batch_size: 2 # input batch size for training
+    num_workers: 0
+  val_data_loader_params:
+    batch_size: 2  # input batch size for validation
+    num_workers: 0
+  evaluate_train_data: EPOCH_COMPLETED  # COMPLETED
+  evaluate_val_data: EPOCH_COMPLETED
+  progress_update: True
+  seed: 0  #
+  train_dataset_size_limit: 2
+  val_dataset_size_limit: 2
+
 
 RUN_CONFIG:
   pipeline_name: __default__
@@ -29,9 +84,24 @@ PIPELINES:
           - val_dataset
 
       - inputs: train_dataset
-        func: {=: pipelinex.GetPartialDataset, size: 100}
+        func: {=: pipelinex.GetPartialDataset, size: 10}
         outputs: partial_train_dataset
 
       - inputs: val_dataset
-        func: {=: pipelinex.GetPartialDataset, size: 100}
+        func: {=: pipelinex.GetPartialDataset, size: 10}
         outputs: partial_val_dataset
+
+      - inputs:  # None
+        func:
+          =: ToPipeline
+          _: {=: pytorch_model}
+        outputs: initial_model
+
+      - inputs:
+          - initial_model
+          - partial_train_dataset
+          - partial_val_dataset
+        func:
+          =: pipelinex.NetworkTrain
+          train_params: {=: train_params}
+        outputs: model
